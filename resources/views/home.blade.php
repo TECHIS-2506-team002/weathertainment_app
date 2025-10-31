@@ -1,5 +1,5 @@
 <x-guest-layout>
-    <div class="p-4 sm:p-6 lg:p-8">
+    <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
 
         {{-- メインタイトル --}}
         <div class="text-center mb-8">
@@ -14,7 +14,7 @@
         </div>
 
         {{-- メインカード --}}
-        <div class="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
+        <div class="w-full mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
             {{-- 地域選択 --}}
             <div class="mb-6">
                 <x-region-selector :currentPrefecture="$selectedCity" />

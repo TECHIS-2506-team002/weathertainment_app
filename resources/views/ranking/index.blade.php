@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="p-4 sm:p-6 lg:p-8">
+    <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
 
         {{-- メインタイトル --}}
         <div class="text-center mb-8">
@@ -13,14 +13,10 @@
         </div>
 
         {{-- 統計情報カード --}}
-        <div class="w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="w-full  mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white rounded-xl shadow-lg p-6 text-center">
                 <p class="text-sm font-medium text-gray-500">データ更新日</p>
                 <p class="text-2xl font-bold text-gray-900 mt-1">{{ $stats['updateDate'] }}</p>
-            </div>
-            <div class="bg-white rounded-xl shadow-lg p-6 text-center">
-                <p class="text-sm font-medium text-gray-500">対象都道府県</p>
-                <p class="text-2xl font-bold text-gray-900 mt-1">{{ $stats['prefectureCount'] }}都道府県</p>
             </div>
             <div class="bg-white rounded-xl shadow-lg p-6 text-center">
                 <p class="text-sm font-medium text-gray-500">平均{{ $selectedType === 'sneeze' ? 'くしゃみ' : ($selectedType === 'fringe_collapse' ? '前髪崩壊' : '洗濯カビ') }}</p>
@@ -33,7 +29,7 @@
         </div>
 
         {{-- ランキング表示セクション --}}
-        <div class="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-8 mb-8">
+        <div class="w-full  mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-8 mb-8">
             <div class="p-0">
                 <!-- タブ切り替え -->
                 <div class="flex border-b border-gray-200 mb-6">
@@ -90,7 +86,7 @@
         </div>
 
         {{-- 週間推移セクション --}}
-        <div class="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
+        <div class="w-full  mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
             <div class="p-0">
                 <h3 class="text-2xl font-bold text-gray-900 mb-6">週間推移</h3>
                 <div class="flex items-center mb-6">
