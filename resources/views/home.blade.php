@@ -1,5 +1,5 @@
 <x-guest-layout>
-    <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <div class="mx-auto py-12 px-4 sm:px-6 lg:px-8">
 
         {{-- メインタイトル --}}
         <div class="text-center mb-8">
@@ -34,7 +34,7 @@
 
             {{-- 生活指数 --}}
             <h3 class="text-xl font-bold text-gray-800 mb-4 text-left">面白指数</h3>
-            <div x-data="{ open: 'sneeze' }" class="space-y-2">
+            <div x-data="{ open: '' }" class="space-y-2">
 
                 {{-- くしゃみ確率 --}}
                 <div class="index-item border-b border-gray-200 pb-2">
@@ -148,18 +148,20 @@
             {{-- アクションボタン --}}
             <div class="mt-8 space-y-4">
                 <a href="{{ $twitterShareUrl }}" target="_blank" class="w-full bg-black text-white py-3 px-4 rounded-full flex items-center justify-center space-x-2 hover:bg-gray-800 transition-colors font-bold text-base">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M6.29 18.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0020 3.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.073 4.073 0 01.8 7.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 010 16.407a11.616 11.616 0 006.29 1.84" />
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 1200 1227">
+                        <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.924L144.011 79.6904H306.615L611.412 515.685L658.88 583.589L1058.01 1154.97H895.408L569.165 687.854V687.828Z" />
                     </svg>
                     <span>結果をXでシェアする</span>
                 </a>
+                {{-- ルート名を'ranking'に修正 --}}
                 <a href="{{ route('ranking') }}" class="w-full text-blue-600 text-center py-2 hover:text-blue-800 transition-colors font-semibold">
                     ランキングを見る
                 </a>
             </div>
             @else
-            <div class="text-center text-red-500">
-                <p>天気情報の取得に失敗しました。</p>
+            {{-- 天気情報取得失敗時の表示 --}}
+            <div class="text-center text-red-500 py-10">
+                <p class="font-bold text-lg">天気情報の取得に失敗しました。</p>
                 <p class="text-sm mt-2">APIキーの設定を確認してください。</p>
             </div>
             @endif

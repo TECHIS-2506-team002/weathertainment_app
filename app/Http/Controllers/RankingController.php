@@ -6,64 +6,56 @@ use Illuminate\Http\Request;
 use App\Models\Ranking;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class RankingController extends Controller
 {
-    /**
-     * ランキングページを表示する
-     */
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $today = Carbon::today();
-        $selectedType = $request->get('type', 'sneeze'); // デフォルトはくしゃみ確率
+        $selectedType = $request->input('type', 'sneeze');
 
-        // 3種類のランキングデータを取得
         $rankings = [
-            'sneeze' => Ranking::where('type', 'sneeze')
-                ->where('ranking_date', $today)
-                ->orderBy('rank', 'asc')
-                ->get(),
-            'fringe_collapse' => Ranking::where('type', 'fringe_collapse')
-                ->where('ranking_date', $today)
-                ->orderBy('rank', 'asc')
-                ->get(),
-            'laundry_mold' => Ranking::where('type', 'laundry_mold')
-                ->where('ranking_date', $today)
-                ->orderBy('rank', 'asc')
-                ->get(),
+            'sneeze' => $this->getTodaysRanking('sneeze', $today),
+            'fringe_collapse' => $this->getTodaysRanking('fringe_collapse', $today),
+            'laundry_mold' => $this->getTodaysRanking('laundry_mold', $today),
         ];
 
-        // 統計情報を計算
         $stats = $this->calculateStats($rankings[$selectedType], $today);
 
-        // 週間推移データを取得（過去7日間）
-        $weeklyData = $this->getWeeklyTrends($selectedType);
+        // フォームから選択された都道府県を取得
+        $chartPrefecture = $request->input('chart_prefecture');
+        // 取得した値を、正しくメソッドに渡す
+        $chartData = $this->getWeeklyChartDataForUser($selectedType, $chartPrefecture);
 
-        return view('ranking.index', [
-            'rankings' => $rankings,
-            'selectedType' => $selectedType,
-            'stats' => $stats,
-            'weeklyData' => $weeklyData,
-        ]);
+        // dd($selectedType, $chartPrefecture, $chartData); // デバッグが必要な場合はこちらを有効化
+
+        return view('ranking.index', compact('rankings', 'selectedType', 'stats', 'chartData'));
     }
 
-    /**
-     * 手動でランキングを更新する
-     */
-    public function update()
+    public function update(): RedirectResponse
     {
         try {
             Artisan::call('ranking:update');
             return redirect()->back()->with('success', 'ランキングを更新しました！');
         } catch (\Exception $e) {
+            Log::error('Ranking update failed: ' . $e->getMessage());
             return redirect()->back()->with('error', 'ランキングの更新に失敗しました。');
         }
     }
 
-    /**
-     * 統計情報を計算する
-     */
-    private function calculateStats($rankings, $date)
+    private function getTodaysRanking(string $type, Carbon $date)
+    {
+        return Ranking::where('type', $type)
+            ->where('ranking_date', $date)
+            ->orderBy('rank', 'asc')
+            ->get();
+    }
+
+    private function calculateStats($rankings, Carbon $date): array
     {
         if ($rankings->isEmpty()) {
             return [
@@ -72,7 +64,6 @@ class RankingController extends Controller
                 'averageScore' => 0,
             ];
         }
-
         return [
             'updateDate' => $date->format('Y/m/d'),
             'prefectureCount' => $rankings->count(),
@@ -81,27 +72,48 @@ class RankingController extends Controller
     }
 
     /**
-     * 週間推移データを取得する
+     * ユーザーの居住地の週間推移グラフ用データを取得する
      */
-    private function getWeeklyTrends($type)
+    // ★★★ メソッド定義を修正し、第2引数を受け取れるようにする ★★★
+    private function getWeeklyChartDataForUser(string $type, ?string $prefectureFromForm): array
     {
-        $endDate = Carbon::today();
-        $startDate = $endDate->copy()->subDays(6);
+        // フォームからの値があれば最優先し、なければフォールバック処理を行う
+        $targetPrefecture = $prefectureFromForm ?? (Auth::check() ? Auth::user()->prefecture : '東京都');
 
-        $trends = [];
-        for ($date = $startDate; $date <= $endDate; $date->addDay()) {
-            $ranking = Ranking::where('type', $type)
-                ->where('ranking_date', $date)
-                ->orderBy('rank', 'asc')
-                ->get();
+        $scoresByDate = Ranking::where('type', $type)
+            ->where('prefecture', $targetPrefecture)
+            ->where('ranking_date', '>=', Carbon::today()->subDays(6))
+            ->orderBy('ranking_date', 'asc')
+            ->pluck('score', 'ranking_date');
 
-            $trends[] = [
-                'date' => $date->format('m/d'),
-                'averageScore' => $ranking->isNotEmpty() ? round($ranking->avg('score'), 1) : 0,
-                'topScore' => $ranking->isNotEmpty() ? $ranking->first()->score : 0,
-            ];
+        $labels = [];
+        $scores = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = Carbon::today()->subDays($i);
+            $dateString = $date->toDateString();
+
+            $labels[] = $date->format('n/j');
+            $scores[] = $scoresByDate[$dateString] ?? 0;
         }
 
-        return $trends;
+        return [
+            'labels' => $labels,
+            'scores' => $scores,
+            'label' => $this->getChartLabel($type),
+            'prefecture' => $targetPrefecture,
+        ];
+    }
+
+    /**
+     * 指数タイプに応じたグラフのラベル名を取得する
+     */
+    private function getChartLabel(string $type): string
+    {
+        return match ($type) {
+            'fringe_collapse' => '前髪崩壊率',
+            'sneeze' => 'くしゃみ確率',
+            'laundry_mold' => '洗濯物カビリスク',
+            default => 'スコア',
+        };
     }
 }
