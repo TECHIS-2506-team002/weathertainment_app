@@ -153,10 +153,11 @@
                     </svg>
                     <span>結果をXでシェアする</span>
                 </a>
+                <!-- 2025.11.3 Deleted Tonoyama -->
                 {{-- ルート名を'ranking'に修正 --}}
-                <a href="{{ route('ranking') }}" class="w-full text-blue-600 text-center py-2 hover:text-blue-800 transition-colors font-semibold">
-                    ランキングを見る
-                </a>
+                <!-- <a href="{{ route('ranking') }}" class="w-full text-blue-600 text-center py-2 hover:text-blue-800 transition-colors font-semibold"> -->
+                    <!-- ランキングを見る -->
+                <!-- </a> -->
             </div>
             @else
             {{-- 天気情報取得失敗時の表示 --}}
