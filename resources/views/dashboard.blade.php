@@ -153,9 +153,10 @@
                     </svg>
                     <span>結果をXでシェアする</span>
                 </a>
-                <a href="{{ route('ranking') }}" class="w-full text-blue-600 text-center py-2 hover:text-blue-800 transition-colors font-semibold">
-                    ランキングを見る
-                </a>
+                <!-- 2025.11.3 Deleted Tonoyama -->
+                <!-- <a href="{{ route('ranking') }}" class="w-full text-blue-600 text-center py-2 hover:text-blue-800 transition-colors font-semibold"> -->
+                    <!-- ランキングを見る -->
+                <!-- </a> -->
             </div>
             @else
             <div class="text-center text-red-500">
