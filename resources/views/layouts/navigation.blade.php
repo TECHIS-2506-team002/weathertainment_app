@@ -6,14 +6,16 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('home') }}" class="flex items-center">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
-                        <span class="ml-3 text-xl font-bold text-gray-900">今日のせいかつ予報</span>
+                        <span class="text-3xl">🤧</span>
+                        <span class="ml-3 text-xl font-bold text-gray-900">鼻ムズバスターズ</span>
                     </a>
                 </div>
             </div>
 
             <!-- Navigation Links (PC) -->
             <div class="hidden sm:flex sm:items-center sm:ml-6 space-x-2">
+                {{-- ダッシュボード以外で表示、またはhomeページでは未ログインの場合のみ表示 --}}
+                @if (!request()->routeIs('dashboard') && !(request()->routeIs('home') && Auth::check()))
                 <a href="{{ route('home') }}" class="inline-flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('home') ? 'font-bold text-blue-600' : '' }}">
                     <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
@@ -26,6 +28,7 @@
                     </svg>
                     ランキング
                 </a>
+                @endif
 
                 @auth
                 {{-- ログイン済み：ユーザー名ドロップダウン --}}
@@ -41,8 +44,8 @@
                         </button>
                     </x-slot>
                     <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">{{ __('Profile') }}</x-dropdown-link>
-                        <form method="POST" action="{{ route('logout') }}">@csrf<x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();">{{ __('Log Out') }}</x-dropdown-link></form>
+                        <x-dropdown-link :href="route('profile.edit')">{{ __('プロフィール設定') }}</x-dropdown-link>
+                        <form method="POST" action="{{ route('logout') }}">@csrf<x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();">{{ __('ログアウト') }}</x-dropdown-link></form>
                     </x-slot>
                 </x-dropdown>
                 @else
@@ -79,8 +82,10 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
+            @if (!request()->routeIs('dashboard') && !(request()->routeIs('home') && Auth::check()))
             <x-responsive-nav-link :href="route('home')" :active="request()->routeIs('home')">{{ __('ホーム') }}</x-responsive-nav-link>
             <x-responsive-nav-link :href="route('ranking')" :active="request()->routeIs('ranking')">{{ __('ランキング') }}</x-responsive-nav-link>
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->

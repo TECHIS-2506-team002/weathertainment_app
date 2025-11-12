@@ -3,117 +3,58 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Ranking;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\View\View;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+// 必要に応じてモデルをインポート
 
 class RankingController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request)
     {
-        $today = Carbon::today();
-        $selectedType = $request->input('type', 'sneeze');
+        $currentTab = $request->query('tab', 'national'); // URLパラメータからタブを取得、デフォルトは national
 
-        $rankings = [
-            'sneeze' => $this->getTodaysRanking('sneeze', $today),
-            'fringe_collapse' => $this->getTodaysRanking('fringe_collapse', $today),
-            'laundry_mold' => $this->getTodaysRanking('laundry_mold', $today),
+        // --- 全国くしゃみワースト1位カード用のダミーデータ ---
+        // 実際はデータベースから取得
+        $worstSneezePrefectureRank = 1;
+        $worstSneezePrefectureName = '北海道'; // 例: 最もくしゃみが多い都道府県
+        $worstSneezeCount = 6; // 例: その都道府県のくしゃみ回数
+        $worstSneezeAvgLevel = 4.2; // 例: その都道府県の平均強さレベル
+
+        // --- 全国ランキング表示用のダミーデータ (くしゃみ回数が多い順) ---
+        // 実際はデータベースから取得
+        $nationalSneezeRankings = [
+            ['rank' => 1, 'prefecture' => '北海道', 'sneeze_count' => 6, 'avg_level' => 4],
+            ['rank' => 2, 'prefecture' => '東京都', 'sneeze_count' => 5, 'avg_level' => 3.8],
+            ['rank' => 3, 'prefecture' => '大阪府', 'sneeze_count' => 5, 'avg_level' => 3.5],
+            ['rank' => 4, 'prefecture' => '福岡県', 'sneeze_count' => 4, 'avg_level' => 3.0],
+            ['rank' => 5, 'prefecture' => '愛知県', 'sneeze_count' => 3, 'avg_level' => 2.5],
+            // ... さらに多くのデータ
         ];
 
-        $stats = $this->calculateStats($rankings[$selectedType], $today);
-
-        // フォームから選択された都道府県を取得
-        $chartPrefecture = $request->input('chart_prefecture');
-        // 取得した値を、正しくメソッドに渡す
-        $chartData = $this->getWeeklyChartDataForUser($selectedType, $chartPrefecture);
-
-        // dd($selectedType, $chartPrefecture, $chartData); // デバッグが必要な場合はこちらを有効化
-
-        return view('ranking.index', compact('rankings', 'selectedType', 'stats', 'chartData'));
-    }
-
-    public function update(): RedirectResponse
-    {
-        try {
-            Artisan::call('ranking:update');
-            return redirect()->back()->with('success', 'ランキングを更新しました！');
-        } catch (\Exception $e) {
-            Log::error('Ranking update failed: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'ランキングの更新に失敗しました。');
-        }
-    }
-
-    private function getTodaysRanking(string $type, Carbon $date)
-    {
-        return Ranking::where('type', $type)
-            ->where('ranking_date', $date)
-            ->orderBy('rank', 'asc')
-            ->get();
-    }
-
-    private function calculateStats($rankings, Carbon $date): array
-    {
-        if ($rankings->isEmpty()) {
-            return [
-                'updateDate' => $date->format('Y/m/d'),
-                'prefectureCount' => 0,
-                'averageScore' => 0,
-            ];
-        }
-        return [
-            'updateDate' => $date->format('Y/m/d'),
-            'prefectureCount' => $rankings->count(),
-            'averageScore' => round($rankings->avg('score'), 1),
+        // --- 個人ランキング表示用のダミーデータ ---
+        // 実際は認証ユーザーのデータから取得
+        $personalRankings = [
+            'rank' => 1, // あなたの順位（もしあれば）
+            'sneeze_count' => 6, // あなたのくしゃみ回数
+            'avg_level' => 4, // あなたの平均強さレベル
         ];
+
+
+        return view('ranking.index', compact(
+            'currentTab',
+            'worstSneezePrefectureRank',
+            'worstSneezePrefectureName',
+            'worstSneezeCount',
+            'worstSneezeAvgLevel',
+            'nationalSneezeRankings',
+            'personalRankings'
+        ));
     }
 
-    /**
-     * ユーザーの居住地の週間推移グラフ用データを取得する
-     */
-    // ★★★ メソッド定義を修正し、第2引数を受け取れるようにする ★★★
-    private function getWeeklyChartDataForUser(string $type, ?string $prefectureFromForm): array
+    public function update(Request $request)
     {
-        // フォームからの値があれば最優先し、なければフォールバック処理を行う
-        $targetPrefecture = $prefectureFromForm ?? (Auth::check() ? Auth::user()->prefecture : '東京都');
-
-        $scoresByDate = Ranking::where('type', $type)
-            ->where('prefecture', $targetPrefecture)
-            ->where('ranking_date', '>=', Carbon::today()->subDays(6))
-            ->orderBy('ranking_date', 'asc')
-            ->pluck('score', 'ranking_date');
-
-        $labels = [];
-        $scores = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::today()->subDays($i);
-            $dateString = $date->toDateString();
-
-            $labels[] = $date->format('n/j');
-            $scores[] = $scoresByDate[$dateString] ?? 0;
-        }
-
-        return [
-            'labels' => $labels,
-            'scores' => $scores,
-            'label' => $this->getChartLabel($type),
-            'prefecture' => $targetPrefecture,
-        ];
-    }
-
-    /**
-     * 指数タイプに応じたグラフのラベル名を取得する
-     */
-    private function getChartLabel(string $type): string
-    {
-        return match ($type) {
-            'fringe_collapse' => '前髪崩壊率',
-            'sneeze' => 'くしゃみ確率',
-            'laundry_mold' => '洗濯物カビリスク',
-            default => 'スコア',
-        };
+        // ランキング更新ロジック
+        // 例: 外部APIからデータを取得し、DBに保存するなど
+        // 今回の画像では更新ボタンは削除したので、このメソッドは使わないかもしれません。
+        // 必要に応じて実装してください。
+        return redirect()->route('ranking')->with('success', 'ランキングデータが更新されました！');
     }
 }
