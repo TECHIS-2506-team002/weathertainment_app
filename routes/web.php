@@ -5,8 +5,8 @@ use App\Http\Controllers\WeatherController;
 use App\Http\Controllers\RankingController;
 use App\Http\Controllers\Auth\DemoLoginController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\SneezeRecordController; // もしコントローラーを使う場合
-
+use App\Http\Controllers\SneezeLogController;
+use App\Http\Controllers\StatisticsController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -37,15 +37,13 @@ Route::middleware(['auth'])->group(function () {
     })->name('sneeze.create');
 
     // もしフォーム送信を処理するなら、POSTルートも必要
-    Route::post('/sneeze', [SneezeRecordController::class, 'store'])->name('sneeze.store');
+    Route::post('/sneeze', [SneezeLogController::class, 'store'])->name('sneeze.store');
 });
 
 // --- くしゃみ統計ページ ---
 Route::middleware(['auth'])->group(function () {
     // ダッシュボードから「くしゃみ統計」ページへのルート
-    Route::get('/sneeze/record', function () {
-        return view('sneeze.record');
-    })->name('sneeze.record');
+    Route::get('/sneeze/record', [StatisticsController::class, 'index'])->name('sneeze.record');
 });
 
 // --- ランキングページ ---

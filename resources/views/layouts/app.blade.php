@@ -15,7 +15,7 @@
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{{ config('app.name') }}">
-    
+
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $title ?? config('app.name') }}">
     <meta name="twitter:description" content="{{ $description ?? 'くしゃみ確率を毎日チェック！天気と鼻タイプからあなたの鼻ムズムズ度を予測します。' }}">
@@ -32,7 +32,19 @@
 <body class="font-sans antialiased bg-gradient-to-br from-purple-600 to-blue-500">
     <div class="min-h-screen bg-transparent">
         @include('layouts.navigation')
-
+        <!-- Session Status -->
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-4">
+            @if (session('success'))
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4" role="alert">
+                <p>{{ session('success') }}</p>
+            </div>
+            @endif
+            @if (session('error'))
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4" role="alert">
+                <p>{{ session('error') }}</p>
+            </div>
+            @endif
+        </div>
         <!-- Page Heading -->
         @isset($header)
         <header class="bg-white shadow">

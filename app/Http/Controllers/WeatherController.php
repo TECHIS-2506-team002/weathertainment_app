@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Services\WeatherService; // WeatherServiceをuseする
+use App\Services\WeatherService; 
 use Illuminate\Support\Facades\Auth;
-use App\Models\User; // Userモデルをuseするのを忘れずに！
+use App\Models\User; 
 
 class WeatherController extends Controller
 {
