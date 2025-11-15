@@ -87,3 +87,8 @@
         </div>
     </div>
 </x-app-layout>
+
+{{-- Tailwind CSS JIT Compiler Safelist --}}
+{{-- JITコンパイラが動的に生成されるクラス名を認識できない問題への対策。 --}}
+{{-- このコメントはブラウザには表示されませんが、ビルド時に以下のクラスがCSSに含まれるようになる。 --}}
+{{-- <div class="bg-gray-400 bg-blue-400 bg-purple-500 bg-pink-500"></div> --}}

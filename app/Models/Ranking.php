@@ -14,12 +14,5 @@ class Ranking extends Model
      *
      * @var array
      */
-    // ↓↓↓↓ この$fillableプロパティを追加 ↓↓↓↓
-    protected $fillable = [
-        'type',
-        'ranking_date',
-        'prefecture',
-        'score',
-        'rank',
-    ];
+    protected $fillable = [ 'type', 'ranking_date', 'prefecture', 'total_count',  'average_level',  'rank', ];
 }
