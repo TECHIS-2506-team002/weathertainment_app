@@ -112,9 +112,9 @@
                 {{ __('1-5段階で感度を設定してください') }}
             </p>
 
-            <!-- アレルギー感度 -->
+            <!-- 花粉感度 -->
             <div class="mb-6">
-                <x-input-label for="allergy_sensitivity" :value="__('アレルギー感度: ' . old('allergy_sensitivity', $user->allergy_sensitivity ?? 3) . '/5')" />
+                <x-input-label for="allergy_sensitivity" :value="__('花粉感度: ' . old('allergy_sensitivity', $user->allergy_sensitivity ?? 3) . '/5')" />
                 <div class="mt-2 flex gap-2">
                     @for ($i = 1; $i <= 5; $i++)
                         <label class="flex-1">
@@ -170,9 +170,9 @@
                 <x-input-error class="mt-2" :messages="$errors->get('temperature_sensitivity')" />
             </div>
 
-            <!-- 気象病感度 -->
+            <!-- 気圧感度 -->
             <div class="mb-6">
-                <x-input-label for="weather_sensitivity" :value="__('気象病感度: ' . old('weather_sensitivity', $user->weather_sensitivity ?? 3) . '/5')" />
+                <x-input-label for="weather_sensitivity" :value="__('気圧感度: ' . old('weather_sensitivity', $user->weather_sensitivity ?? 3) . '/5')" />
                 <div class="mt-2 flex gap-2">
                     @for ($i = 1; $i <= 5; $i++)
                         <label class="flex-1">
