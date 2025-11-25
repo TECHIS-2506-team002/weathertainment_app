@@ -14,7 +14,7 @@ class RankingController extends Controller
 {
     public function index(Request $request): View
     {
-        $today = Carbon::today();
+        $today = Carbon::now('Asia/Tokyo')->toDateString();
         $currentTab = $request->query('tab', 'national');
 
         // --- 全国ランキング関連のデータを取得 ---
