@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Services\WeatherService; 
+use App\Services\WeatherService;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User; 
+use App\Models\User;
 
 class WeatherController extends Controller
 {
@@ -19,7 +19,6 @@ class WeatherController extends Controller
 
     public function index(Request $request)
     {
-        // 現在ログインしているユーザーを取得
         $user = Auth::user();
 
         // === STEP 1: 表示する都市名を決定するロジック ===
@@ -29,9 +28,7 @@ class WeatherController extends Controller
 
         // まず、地域選択フォームからの入力を最優先でチェック
         $cityFromRequest = $request->input('prefecture');
-
         if ($cityFromRequest) {
-            // フォームからの入力があれば、それを$cityとする
             $city = $cityFromRequest;
             // 県庁所在地名を取得
             $capitalCity = $capitals[$city] ?? $city;
@@ -41,7 +38,6 @@ class WeatherController extends Controller
             // 県庁所在地名を取得
             $capitalCity = $capitals[$city] ?? $city;
         } else {
-            // 上記のいずれでもなければ、デフォルトで'東京都'を使う
             $city = '東京都';
             // 未ログイン時は、天気取得都市を「新宿」に固定する
             $capitalCity = '新宿区';
@@ -76,31 +72,31 @@ class WeatherController extends Controller
         // くしゃみ確率と信頼度の算出
         $sneezeRate = 'N/A';
         $sneezeReliability = 0;
-        $sneezeRateCalculationMethod = '天気情報のみ'; // 計算方法の初期値
+        $weatherData = $this->weatherService->getCurrentWeather($city);
+        $comprehensiveData = null; // 初期化
 
         if ($weatherData) {
-            // 天気情報から基本のくしゃみ確率を算出
-            $baseSneezeRate = $this->weatherService->calculateSneezeRateFromWeather($weatherData); // WeatherServiceに新しく定義するメソッド
-
-            if ($hasNoseType) {
-                // 鼻タイプと天気情報を組み合わせてくしゃみ確率を算出
-                $result = $this->weatherService->calculatePersonalSneezeRate($baseSneezeRate, $noseTypeInfo['type'], $weatherData, $user); // WeatherServiceに新しく定義するメソッド
-                $sneezeRate = $result['rate'];
-                $sneezeReliability = $result['reliability'];
-                $sneezeRateCalculationMethod = '天気情報＋体質情報';
-            } else {
-                // 体質情報が未設定の場合は、天気情報のみで算出
-                $sneezeRate = $baseSneezeRate;
-                $sneezeReliability = $this->weatherService->calculateReliabilityFromWeather($weatherData); // WeatherServiceに新しく定義するメソッド
-                $sneezeRateCalculationMethod = '天気情報のみ';
-            }
-        } else {
-            // 天気情報が取得できない場合
-            $sneezeRate = 'N/A';
-            $sneezeReliability = 0;
-            $sneezeRateCalculationMethod = 'データなし';
+            $lat = $weatherData['coord']['lat'];
+            $lon = $weatherData['coord']['lon'];
+            $airPollutionData = $this->weatherService->getAirPollution($lat, $lon);
+            $oneCallData = $this->weatherService->getOneCallData($lat, $lon);
+            $comprehensiveData = array_merge($weatherData, $airPollutionData ?? [], $oneCallData ?? []);
         }
 
+        // STEP 3: くしゃみ確率の算出
+        if ($comprehensiveData) {
+            $baseSneezeRate = $this->weatherService->calculateSneezeRateFromWeather($comprehensiveData);
+            if ($user && $user->getNoseType()['type'] !== '未設定タイプ') {
+                $result = $this->weatherService->calculatePersonalSneezeRate($baseSneezeRate, $user, $comprehensiveData);
+                $sneezeRate = $result['rate'];
+                $sneezeReliability = $result['reliability'];
+            } else {
+                $sneezeRate = $baseSneezeRate;
+                $sneezeReliability = $this->weatherService->calculateReliabilityFromWeather($comprehensiveData);
+            }
+        }
+
+        // ★★★ ここから、不足していた変数の準備ロジック ★★★
 
         // $viewDataにユーザーの鼻タイプ情報と計算結果を追加
         $viewData['user'] = $user; // デバッグ情報用にユーザーオブジェクトを渡す
@@ -162,7 +158,43 @@ class WeatherController extends Controller
             $viewData['ogImage'] = asset('images/ogp-default.png');
         }
 
-        // ログイン状態に応じて、表示するビューを切り替える
+        // シェアテキストの生成
+        $shareText = "私の今日のくしゃみ確率は【{$sneezeRate}%】でした！";
+        if ($hasNoseType) {
+            $shareText .= " 鼻タイプは「{$noseTypeInfo['type']}」です。";
+        }
+        $shareText .= " #鼻ムズバスターズ";
+        $appUrl = url('/');
+        $twitterShareUrl = "https://twitter.com/intent/tweet?" . http_build_query([
+            'text' => $shareText,
+            'url' => $appUrl
+        ]);
+
+        // OGP用のデータ
+        $ogpTitle = "今日のくしゃみ確率 {$sneezeRate}%";
+        $ogpDescription = $shareText;
+
+        // ★★★ ここまで ★★★
+
+        // STEP 4: ビューに渡すデータを全てまとめる
+        $viewData = [
+            'user' => $user,
+            'weatherData' => $weatherData,
+            'selectedCity' => $city,
+            'sneezeRate' => $sneezeRate,
+            'sneezeReliability' => $sneezeReliability,
+            'userNoseType' => $noseTypeInfo['type'],
+            'userNoseTypeIcon' => $noseTypeInfo['icon'],
+            'userNoseTypeDescription' => $noseTypeInfo['description'],
+            'hasNoseType' => $hasNoseType,
+            'sneezeRateNote' => $sneezeRateNote,
+            'twitterShareUrl' => $twitterShareUrl,
+            'title' => $ogpTitle,
+            'description' => $ogpDescription,
+            'ogImage' => asset('images/ogp-default.png'),
+        ];
+
+        // STEP 5: ビューを返す
         if ($user) {
             return view('dashboard', $viewData);
         } else {

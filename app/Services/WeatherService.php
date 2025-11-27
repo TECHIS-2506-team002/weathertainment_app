@@ -12,12 +12,9 @@ class WeatherService
      */
     public function getCurrentWeather(?string $city = null): ?array
     {
-        // デフォルト値を設定
         if (!$city) {
-            $city = 'Tokyo';
+            $city = '東京都';
         }
-
-        // 都道府県名を英語の都市名に変換
         $city = $this->convertPrefectureToCity($city);
 
         $apiKey = config('services.openweathermap.key');
@@ -36,176 +33,196 @@ class WeatherService
         if ($response->successful()) {
             return $response->json();
         }
-
-        \Log::error("Failed to get weather data for {$city}: " . $response->status() . " - " . $response->body());
         return null;
     }
 
     /**
-     * 天気データから「くしゃみ発生確率」を計算する (基本確率)
-     * 気温、湿度、風速、天気条件を総合的に判断
-     *
-     * @param array $weatherData
-     * @return int 0-100
+     * 指定された緯度経度の大気汚染情報を取得する
      */
-    public function calculateSneezeRateFromWeather(array $weatherData): int
+    public function getAirPollution(float $lat, float $lon): ?array
     {
-        $sneezeRate = 0;
-
-        // 気温による影響（寒暖差でくしゃみが出やすい）
-        $temp = $weatherData['main']['temp'] ?? 20;
-        if ($temp < 10) {
-            $sneezeRate += 30; // 寒いとくしゃみ
-        } elseif ($temp > 30) {
-            $sneezeRate += 25; // 暑すぎてもムズムズ
-        } elseif ($temp < 15 || $temp > 25) {
-            $sneezeRate += 15; // やや不快な温度
+        $apiKey = config('services.openweathermap.key');
+        if (! $apiKey) {
+            return null;
         }
 
-        // 湿度による影響（低湿度で鼻粘膜が乾燥）
-        $humidity = $weatherData['main']['humidity'] ?? 50;
-        if ($humidity < 30) {
-            $sneezeRate += 35; // 乾燥でくしゃみ多発
-        } elseif ($humidity < 50) {
-            $sneezeRate += 20; // やや乾燥
-        } elseif ($humidity > 80) {
-            $sneezeRate += 10; // 高湿度でもムズムズ
-        }
+        $response = Http::get('https://api.openweathermap.org/data/2.5/air_pollution', [
+            'lat' => $lat,
+            'lon' => $lon,
+            'appid' => $apiKey,
+        ]);
 
-        // 風速による影響（花粉・ホコリが舞う）
-        $windSpeed = $weatherData['wind']['speed'] ?? 0;
-        if ($windSpeed > 7) {
-            $sneezeRate += 25; // 強風で花粉飛散
-        } elseif ($windSpeed > 4) {
-            $sneezeRate += 15; // やや風あり
-        } elseif ($windSpeed > 2) {
-            $sneezeRate += 5; // 微風
+        if ($response->successful()) {
+            $data = $response->json();
+            if (isset($data['list'][0])) {
+                return [
+                    'aqi' => $data['list'][0]['main']['aqi'],
+                    'components' => $data['list'][0]['components'],
+                ];
+            }
         }
-
-        // 天気による影響
-        $weather = $weatherData['weather'][0]['main'] ?? 'Clear';
-        if (in_array($weather, ['Clear', 'Clouds'])) {
-            $sneezeRate += 15; // 晴れ・曇りは花粉が飛びやすい
-        } elseif ($weather === 'Rain') {
-            $sneezeRate -= 25; // 雨の日は花粉が少ない
-        } elseif (in_array($weather, ['Mist', 'Fog', 'Haze'])) {
-            $sneezeRate += 10; // もやでムズムズ
-        }
-
-        // 0-100の範囲に収める
-        return min(100, max(0, $sneezeRate));
+        return null;
     }
 
     /**
-     * 天気情報のみから信頼度を算出する
-     * 最大信頼度は80%に設定し、不確定要素の幅を持たせる
-     *
-     * @param array $weatherData
-     * @return int 0-100
+     * 指定された緯度経度のOne Call APIデータを取得する
      */
-    public function calculateReliabilityFromWeather(array $weatherData): int
+    public function getOneCallData(float $lat, float $lon): ?array
     {
-        $reliability = 60; // 基本の信頼度
-
-        // 必須データが存在するかチェック
-        if (isset($weatherData['main']['temp']) && isset($weatherData['main']['humidity']) && isset($weatherData['wind']['speed']) && isset($weatherData['weather'][0]['main'])) {
-            $reliability += 20; // 主要なデータが全て揃っていれば加点
-        } else {
-             // 重要な情報が一つでも欠けていたら減点
-            if (!isset($weatherData['main']['temp'])) $reliability -= 10;
-            if (!isset($weatherData['main']['humidity'])) $reliability -= 10;
-            if (!isset($weatherData['wind']['speed'])) $reliability -= 10;
-            if (!isset($weatherData['weather'][0]['main'])) $reliability -= 10;
+        $apiKey = config('services.openweathermap.key');
+        if (! $apiKey) {
+            return null;
         }
 
-        // 地域情報の正確性（都道府県→都市名変換の精度などを考慮）
-        // 現状は常に高精度と仮定し、ここでは調整なし
+        $response = Http::get('https://api.openweathermap.org/data/3.0/onecall', [
+            'lat' => $lat,
+            'lon' => $lon,
+            'appid' => $apiKey,
+            'units' => 'metric',
+            'exclude' => 'current,minutely,hourly,alerts',
+        ]);
 
-        return max(0, min(90, (int)$reliability)); // 最大信頼度を90%に設定
+        if ($response->successful()) {
+            $data = $response->json();
+            if (isset($data['daily'][0])) {
+                return [
+                    'daily_weather' => $data['daily'][0],
+                ];
+            }
+        }
+        return null;
+    }
+
+    // getCurrentWeather, getAirPollution, getOneCallData の3メソッドは、変更なし
+
+    // ★★★ ここから下が、完全に新しいロジックになります ★★★
+
+    /**
+     * 6つのサブスコアモデルに基づき、基本くしゃみ確率を算出する
+     *
+     * @param array $data 3つのAPIから集約された気象データ
+     * @return int 0-100
+     */
+    public function calculateSneezeRateFromWeather(array $data): int
+    {
+        $pollenProxyScore = $this->calculatePollenProxyScore($data); // 0-20点
+        $drynessScore     = $this->calculateDrynessScore($data);     // 0-20点
+        $windScore        = $this->calculateWindScore($data);        // 0-20点
+        $pressureScore    = $this->calculatePressureScore($data);    // 0-15点
+        $pollutionScore   = $this->calculatePollutionScore($data);   // 0-20点
+        $tempGapScore     = $this->calculateTempGapScore($data);     // 0-15点
+
+        $totalScore = $pollenProxyScore + $drynessScore + $windScore + $pressureScore + $pollutionScore + $tempGapScore;
+
+        return min(100, $totalScore); // 合計が100を超えた場合でも100に丸める
+    }
+
+    // --- 6つのサブスコア計算メソッド (全てprivate) ---
+
+    private function calculatePollenProxyScore(array $data): int
+    {
+        $score = 0;
+        if (($data['weather'][0]['main'] ?? '') === 'Clear') {
+            $score += 5;
+        }
+        if (($data['main']['humidity'] ?? 100) < 40) {
+            $score += 5;
+        }
+        if (($data['wind']['speed'] ?? 0) >= 4) {
+            $score += 10;
+        }
+        return $score;
+    }
+
+    private function calculateDrynessScore(array $data): int
+    {
+        $humidity = $data['main']['humidity'] ?? 100;
+        if ($humidity < 20) return 20;
+        if ($humidity < 40) return 10;
+        return 0;
+    }
+
+    private function calculateWindScore(array $data): int
+    {
+        $windSpeed = $data['wind']['speed'] ?? 0;
+        if ($windSpeed >= 8) return 20;
+        if ($windSpeed >= 5) return 10;
+        return 0;
+    }
+
+    private function calculatePressureScore(array $data): int
+    {
+        $pressure = $data['main']['pressure'] ?? 1015;
+        if ($pressure < 1010) return 15;
+        if ($pressure < 1015) return 8;
+        return 0;
+    }
+
+    private function calculatePollutionScore(array $data): int
+    {
+        $aqi = $data['aqi'] ?? 1; // getAirPollutionから渡されるAQI
+        return match ($aqi) {
+            1 => 0,
+            2 => 5,
+            3 => 10,
+            4 => 15,
+            5 => 20,
+            default => 0,
+        };
+    }
+
+    private function calculateTempGapScore(array $data): int
+    {
+        $morningTemp = $data['daily_weather']['temp']['morn'] ?? null;
+        $dayTemp = $data['daily_weather']['temp']['day'] ?? null;
+
+        if ($morningTemp === null || $dayTemp === null) {
+            return 0; // データがなければ0点
+        }
+
+        $gap = abs($dayTemp - $morningTemp); // 絶対値で差を計算
+        if ($gap >= 15) return 15;
+        if ($gap >= 10) return 8;
+        return 0;
     }
 
 
-    /**
-     * ユーザーの鼻タイプと天気情報を組み合わせて個人のくしゃみ確率と信頼度を算出する
-     *
-     * @param int $baseSneezeRate 天気情報のみで算出された基本くしゃみ確率
-     * @param string $noseType ユーザーの鼻タイプ名
-     * @param array $weatherData 天気情報
-     * @param User $user ユーザーモデル
-     * @return array ['rate' => int, 'reliability' => int]
-     */
-    public function calculatePersonalSneezeRate(int $baseSneezeRate, string $noseType, array $weatherData, User $user): array
+    // --- 信頼度とパーソナル確率の計算ロジックも刷新 ---
+
+    public function calculatePersonalSneezeRate(int $baseSneezeRate, User $user, array $data): array
     {
         $personalRate = $baseSneezeRate;
-        $reliability = $this->calculateReliabilityFromWeather($weatherData); // 基本信頼度は天気から
 
-        // ユーザーの体質情報
-        $allergySensitivity = $user->allergy_sensitivity ?? 0;
-        $temperatureSensitivity = $user->temperature_sensitivity ?? 0;
-        $weatherSensitivity = $user->weather_sensitivity ?? 0;
+        // 感度レベルを補正係数に変換 (1-5 -> 0.8-1.2)
+        $allergyMultiplier = 1 + (($user->allergy_sensitivity ?? 3) - 3) * 0.1;
+        $tempMultiplier = 1 + (($user->temperature_sensitivity ?? 3) - 3) * 0.1;
+        $weatherMultiplier = 1 + (($user->weather_sensitivity ?? 3) - 3) * 0.1;
 
-        // 天気情報から詳細な要素を取得
-        $temp = $weatherData['main']['temp'] ?? 20;
-        $humidity = $weatherData['main']['humidity'] ?? 50;
-        $windSpeed = $weatherData['wind']['speed'] ?? 0;
-        $weatherMain = $weatherData['weather'][0]['main'] ?? 'Clear';
+        // アレルギー感度は、花粉・乾燥・風・汚染スコアに影響
+        $personalRate += ($this->calculatePollenProxyScore($data) + $this->calculateDrynessScore($data) + $this->calculateWindScore($data) + $this->calculatePollutionScore($data)) * ($allergyMultiplier - 1);
 
-        // 鼻タイプと体質情報に基づく調整
-        switch ($noseType) {
-            case 'マルチアラート鼻':
-                // 全ての敏感度が高いので、天気情報の影響をより強く受ける
-                $personalRate = $personalRate * 1.3; // 1.3倍に増幅
-                $reliability += 15; // 個人の情報が加わるので信頼度も上がる
-                break;
-            case '花粉ハンター鼻':
-                // アレルギー敏感度が高いので、花粉が飛びやすい条件で強く影響
-                if ($allergySensitivity >= 4 && in_array($weatherMain, ['Clear', 'Clouds']) && $windSpeed > 3) {
-                    $personalRate += 30; // 大きく加算
-                }
-                $reliability += 10;
-                break;
-            case '気候センサー鼻':
-                // 温度・天気に敏感なので、気温や湿度の変化で影響
-                if ($temperatureSensitivity >= 4 && ($temp >= 30 || $temp <= 10)) {
-                    $personalRate += 25; // 極端な気温
-                }
-                if ($weatherSensitivity >= 4 && ($humidity < 40 || $humidity > 80)) { // 乾燥や高湿度に反応
-                    $personalRate += 20;
-                }
-                $reliability += 10;
-                break;
-            case '敏感ノーズ':
-                // 全体的に中程度の敏感さなので、天気情報の影響をやや強く受ける
-                $personalRate = $personalRate * 1.1; // 1.1倍に増幅
-                $reliability += 5;
-                break;
-            case 'バランス鼻':
-                // 体質の影響が少ないので、天気情報の基本確率に大きな変化なし
-                // 信頼度も基本天気情報ベース
-                break;
-        }
+        // 寒暖差感度は、気温差スコアに影響
+        $personalRate += $this->calculateTempGapScore($data) * ($tempMultiplier - 1);
 
-        // 個人の敏感度による微調整（各敏感度がくしゃみ確率に与える影響）
-        // スコアが高いほどくしゃみ確率も高まる
-        $personalRate += ($allergySensitivity * 2);
-        $personalRate += ($temperatureSensitivity * 1.5);
-        $personalRate += ($weatherSensitivity * 1.5);
+        // 気象病感度は、気圧スコアに影響
+        $personalRate += $this->calculatePressureScore($data) * ($weatherMultiplier - 1);
 
-        // 信頼度も個人の体質情報が加わることで上昇
-        // 全ての体質情報が設定されていればさらに信頼度アップ
-        if ($allergySensitivity > 0 || $temperatureSensitivity > 0 || $weatherSensitivity > 0) {
-            $reliability += 10; // いずれかの体質情報があれば上昇
-        }
-        if ($allergySensitivity > 0 && $temperatureSensitivity > 0 && $weatherSensitivity > 0) {
-            $reliability += 5; // すべて揃っていればさらに追加
-        }
+        $reliability = 90; // 体質情報があるので信頼度は高い
 
+        return [
+            'rate' => max(0, min(100, (int)round($personalRate))),
+            'reliability' => $reliability,
+        ];
+    }
 
-        // 上限・下限を調整
-        $personalRate = max(0, min(100, (int)$personalRate));
-        $reliability = max(0, min(90, (int)$reliability)); // ここでも最大信頼度を90%に設定
-
-        return ['rate' => $personalRate, 'reliability' => $reliability];
+    public function calculateReliabilityFromWeather(array $data): int
+    {
+        // 簡易的な信頼度。データがどれだけ揃っているかで判定
+        $score = 50;
+        if (isset($data['main'])) $score += 10;
+        if (isset($data['aqi'])) $score += 10;
+        if (isset($data['daily_weather'])) $score += 10;
+        return $score;
     }
 
     /**
