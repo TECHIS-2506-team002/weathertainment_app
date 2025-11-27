@@ -115,7 +115,7 @@
                 @if (isset($weatherData) && $weatherData)
                 {{-- 天気情報 --}}
                 <div class="text-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-2">{{ $weatherData['name'] }} の今日の予報</h2>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">{{ $capitalCity }} の今日の予報</h2>
                     <p class="text-gray-600 text-lg mb-2 capitalize">{{ $weatherData['weather'][0]['description'] }}</p>
                     <p class="text-red-500 text-5xl font-bold">{{ number_format($weatherData['main']['temp'], 1) }} °C</p>
                     <p class="text-blue-500 text-2xl font-semibold mt-1">{{ $weatherData['main']['humidity'] }}%</p>

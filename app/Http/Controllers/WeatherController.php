@@ -23,6 +23,9 @@ class WeatherController extends Controller
         $user = Auth::user();
 
         // === STEP 1: 表示する都市名を決定するロジック ===
+        // 県庁所在地リストを読み込む
+        // Laravelのconfigディレクトリに配置することを想定
+        $capitals = config('capitals.prefectural_capitals');
 
         // まず、地域選択フォームからの入力を最優先でチェック
         $cityFromRequest = $request->input('prefecture');
@@ -30,16 +33,23 @@ class WeatherController extends Controller
         if ($cityFromRequest) {
             // フォームからの入力があれば、それを$cityとする
             $city = $cityFromRequest;
+            // 県庁所在地名を取得
+            $capitalCity = $capitals[$city] ?? $city;
         } elseif ($user && $user->prefecture) { // $userがnullでないことを確認
             // フォーム入力がなく、ログインしていて、かつ都道府県が登録されていれば、それを使う
             $city = $user->prefecture;
+            // 県庁所在地名を取得
+            $capitalCity = $capitals[$city] ?? $city;
         } else {
             // 上記のいずれでもなければ、デフォルトで'東京都'を使う
             $city = '東京都';
+            // 未ログイン時は、天気取得都市を「新宿」に固定する
+            $capitalCity = '新宿区';
         }
 
         // === STEP 2: 天気情報を取得 ===
-        $weatherData = $this->weatherService->getCurrentWeather($city);
+        // 天気情報を取得する都市名には、県庁所在地名を使用する
+        $weatherData = $this->weatherService->getCurrentWeather($capitalCity);
 
         // --- ビューに渡すための共通データをまとめる ---
         $viewData = [];
@@ -109,6 +119,7 @@ class WeatherController extends Controller
         if ($weatherData) {
             $viewData['weatherData'] = $weatherData;
             $viewData['selectedCity'] = $city;
+            $viewData['capitalCity'] = $capitalCity;
 
             // X（旧Twitter）シェアテキストの生成
             // 個人の確率と鼻タイプをメインとする
@@ -135,7 +146,8 @@ class WeatherController extends Controller
         } else {
             // 天気取得失敗時のデータ
             $viewData['weatherData'] = null;
-            $viewData['selectedCity'] = $city; // 失敗時も選択された都市名は渡す
+            $viewData['selectedCity'] = $city;
+            $viewData['capitalCity'] = $capitalCity; // 失敗時も選択された都市名は渡す
 
             // 天気情報が取得できなかった場合でも、くしゃみ確率と信頼度をデフォルト値で渡す
             // ここでのくしゃみ確率は上記で設定済みだが、N/Aの場合はここで再度設定
