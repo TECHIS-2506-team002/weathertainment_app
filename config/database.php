@@ -95,7 +95,7 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => 'prefer',
+            'sslmode' => 'require;options=endpoint=ep-dark-dream-a40msk9p',
         ],
 
         'sqlsrv' => [
