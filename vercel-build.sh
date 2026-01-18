@@ -13,7 +13,3 @@ curl -sL https://github.com/shivammathur/php-builder-builds/releases/latest/down
 # 4. フロントエンドのビルド
 npm install
 npm run build
-
-# デプロイのたびに毎回リセット(キャッシュを強制削除）
-./php artisan config:clear
-./php artisan cache:clear
