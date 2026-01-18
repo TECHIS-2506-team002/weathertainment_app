@@ -16,16 +16,6 @@
         "APP_ENV": "production",
         "APP_DEBUG": "false",
         "APP_URL": "https://${VERCEL_URL}",
-
-        "DB_CONNECTION": "${DB_CONNECTION}",
-        "DB_HOST": "${DB_HOST}",
-        "DB_PORT": "${DB_PORT}",
-        "DB_DATABASE": "${DB_DATABASE}",
-        "DB_USERNAME": "${DB_USERNAME}",
-        "DB_PASSWORD": "${DB_PASSWORD}",
-        "DB_SSLMODE": "${DB_SSLMODE}",
-        "OPENWEATHERMAP_API_KEY": "${OPENWEATHERMAP_API_KEY}",
-
         "APP_CONFIG_CACHE": "/tmp/config.php",
         "APP_EVENTS_CACHE": "/tmp/events.php",
         "APP_PACKAGES_CACHE": "/tmp/packages.php",
